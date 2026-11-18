@@ -1,0 +1,61 @@
+; ==============================================================================
+; Asterisk Dialplan Template for JioFiber Global PBX Gateway
+; https://github.com/musabtvt/jiofiber-asterisk-global-pbx
+; ==============================================================================
+
+[general]
+static=yes
+writeprotect=no
+
+[globals]
+MY_JIO_NUMBER={{JIO_LANDLINE_NUMBER}}
+MY_STD_CODE=0XX
+
+[from-phones]
+; Inter-extension calling
+exten => 1001,1,NoOp(Calling Extension 1001)
+ same => n,Dial(PJSIP/1001,30)
+ same => n,Hangup()
+
+exten => 1002,1,NoOp(Calling Extension 1002)
+ same => n,Dial(PJSIP/1002,30)
+ same => n,Hangup()
+
+; E.164 Format: +91XXXXXXXXXX -> Standard E.164 with +91 prefix
+exten => _+91XXXXXXXXXX,1,NoOp(Outbound Call E.164 ${EXTEN})
+ same => n,Set(CALLERID(num)=${MY_JIO_NUMBER})
+ same => n,Set(CALLERID(name)=${MY_JIO_NUMBER})
+ same => n,Set(PJSIP_HEADER(add,P-Preferred-Identity)=<sip:${MY_JIO_NUMBER}@ue.wln.ims.jio.com>)
+ same => n,Dial(PJSIP/jio-trunk/sip:${EXTEN}@ue.wln.ims.jio.com,60)
+ same => n,Hangup()
+
+; Standard 10-Digit Indian Mobile (starts with 6, 7, 8, or 9) -> Add +91
+exten => _[6-9]XXXXXXXXX,1,NoOp(Outbound Call 10-Digit Mobile ${EXTEN})
+ same => n,Set(CALLERID(num)=${MY_JIO_NUMBER})
+ same => n,Set(CALLERID(name)=${MY_JIO_NUMBER})
+ same => n,Set(PJSIP_HEADER(add,P-Preferred-Identity)=<sip:${MY_JIO_NUMBER}@ue.wln.ims.jio.com>)
+ same => n,Dial(PJSIP/jio-trunk/sip:+91${EXTEN}@ue.wln.ims.jio.com,60)
+ same => n,Hangup()
+
+; STD Landline with leading 0 (e.g. 011..., 022..., 080...) -> Replace 0 with +91
+exten => _0[1-9]XXXXXXXXX,1,NoOp(Outbound Call STD ${EXTEN})
+ same => n,Set(CALLERID(num)=${MY_JIO_NUMBER})
+ same => n,Set(CALLERID(name)=${MY_JIO_NUMBER})
+ same => n,Set(PJSIP_HEADER(add,P-Preferred-Identity)=<sip:${MY_JIO_NUMBER}@ue.wln.ims.jio.com>)
+ same => n,Dial(PJSIP/jio-trunk/sip:+91${EXTEN:1}@ue.wln.ims.jio.com,60)
+ same => n,Hangup()
+
+; Toll-free & Emergency (1800..., 198, 112)
+exten => _X.,1,NoOp(Outbound Special Service ${EXTEN})
+ same => n,Set(CALLERID(num)=${MY_JIO_NUMBER})
+ same => n,Set(CALLERID(name)=${MY_JIO_NUMBER})
+ same => n,Dial(PJSIP/jio-trunk/sip:${EXTEN}@ue.wln.ims.jio.com,60)
+ same => n,Hangup()
+
+; Incoming calls arriving from Jio IMS Voice line
+[from-jio]
+exten => s,1,NoOp(Incoming Jio Landline Call from ${CALLERID(num)})
+ same => n,Dial(PJSIP/1001&PJSIP/1002,35)
+ same => n,Hangup()
+
+exten => _.,1,Goto(from-jio,s,1)

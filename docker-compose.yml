@@ -1,0 +1,22 @@
+services:
+  asterisk:
+    image: andrius/asterisk:20-alpine
+    container_name: jiofiber-asterisk-pbx
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - ./asterisk/modules.conf:/etc/asterisk/modules.conf:ro
+      - ./asterisk/keys:/etc/asterisk/keys:ro
+      - asterisk-spool:/var/spool/asterisk
+      - asterisk-logs:/var/log/asterisk
+    environment:
+      - JIO_NUMBER=${JIO_LANDLINE_NUMBER}
+      - EXT_1001_SECRET=${EXT_1001_PASSWORD}
+      - EXT_1002_SECRET=${EXT_1002_PASSWORD}
+
+volumes:
+  asterisk-spool:
+  asterisk-logs:

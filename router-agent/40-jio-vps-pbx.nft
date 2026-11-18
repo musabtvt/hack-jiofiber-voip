@@ -1,0 +1,22 @@
+#!/usr/sbin/nft -f
+# ==============================================================================
+# Jio Voice - nftables Ruleset for VPS Reverse PBX
+# Forwards SIP/RTP traffic between WireGuard VPN tunnel and Jio Voice VLAN 406
+# ==============================================================================
+
+table inet jio_pbx_bridge {
+    chain forward {
+        type filter hook forward priority 0; policy accept;
+
+        # Allow WireGuard wg_vps to Voice VLAN (FTTH 406 or AirFiber 1015)
+        iifname "wg_vps" oifname { "wan.406", "wan.1015", "eth*.406", "voice" } accept
+        iifname { "wan.406", "wan.1015", "eth*.406", "voice" } oifname "wg_vps" ct state established,related accept
+    }
+
+    chain postrouting {
+        type filter hook postrouting priority srcnat; policy accept;
+
+        # Masquerade outbound traffic to voice interface
+        oifname { "wan.406", "wan.1015", "eth*.406", "voice" } masquerade
+    }
+}
